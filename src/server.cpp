@@ -19,12 +19,13 @@
 std::string REQ_WEATHER = "w\n";
 std::string REQ_TIME = "t\n";
 std::string REQ_QUIT = "q\n";
-
 std::string HELP = "Usage:\n\t[w] for weather\n\t[t] for time\n\t[q] to quit\n";
 std::string WELCOME = "Welcome to Atlanta Weather and Time Server\n" + HELP;
 std::string WEATHER = "Today's Weather: ";
 std::string TIME = "Current Time: ";
+std::string WEATHER_TYPE[] = {"Sunny", "Cloudy", "Rainy", "Stormy"};
 
+/* Gets the Current Date and Time */
 const std::string currentDateTime() {
   time_t now = time(0);
   struct tm tstruct;
@@ -34,13 +35,13 @@ const std::string currentDateTime() {
   return buf;
 }
 
+/* Returns a Random Weather Report */
 std::string currentWeather() {
-  std::string weatherType[] = {"Sunny", "Cloudy", "Rainy", "Stormy"};
   srand(time(NULL));
   int temp = rand() % 170 - 45;
   int wtype = rand() % 4;
   std::cout << wtype;
-  return std::to_string(temp) + " deg F and " + weatherType[wtype];
+  return std::to_string(temp) + " deg F and " + WEATHER_TYPE[wtype];
 }
 
 /* client session handler */
@@ -48,19 +49,25 @@ void handle_client(int sockfd) {
   char buffer[256];
   bzero(buffer,256);
 
+  // welcome user, display help, prompt for input
   if(write(sockfd, WELCOME.c_str(), WELCOME.length()) < 0)
     std::cout << "[" << sockfd << "] ERROR writing to socket\n";
 
+  // session loop
   for(;;) {
     bzero(buffer,256);
+    // get user querry
     if(read(sockfd, buffer, 255) < 0)
       std::cout << "[" << sockfd << "] ERROR reading from socket\n";
 
+    // log user querry
     std::cout << "[" << sockfd << "]Message: " << buffer << "\n";
-    if(strcmp(REQ_QUIT.c_str(), buffer) == 0)
-      break;
+
 
     int n;
+    // answer user querry
+    if(strcmp(REQ_QUIT.c_str(), buffer) == 0)
+      break;
     if(strcmp(REQ_WEATHER.c_str(), buffer) == 0) {
       std::string curweather = WEATHER + currentWeather() + "\n";
       n = write(sockfd, curweather.c_str(), curweather.length());
@@ -78,12 +85,14 @@ void handle_client(int sockfd) {
 }
 
 int main() {
+  // create socket
   int sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd < 0) {
     printf("ERROR opening socket\n");
     exit(0);
   }
 
+  // bind to socket
   struct sockaddr_in serv_addr;
   bzero((char *) &serv_addr, sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
@@ -94,15 +103,20 @@ int main() {
     exit(0);
   }
 
+  // main loop
   for(;;) {
     std::cout << "Listening...\n";
     listen(sockfd, 5);
     struct sockaddr_in cli_addr;
     socklen_t clilen = sizeof(cli_addr);
+    // accept new client connection
     int newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
     std::cout << "Accepted: " << newsockfd << "\n";
+    // handle client session in new thread
     std::thread(handle_client, newsockfd).detach();
   }
+
+  // clean up
   close(sockfd);
   return 0;
 }
