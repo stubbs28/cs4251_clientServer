@@ -34,6 +34,15 @@ const std::string currentDateTime() {
   return buf;
 }
 
+std::string currentWeather() {
+  std::string weatherType[] = {"Sunny", "Cloudy", "Rainy", "Stormy"};
+  srand(time(NULL));
+  int temp = rand() % 170 - 45;
+  int wtype = rand() % 4;
+  std::cout << wtype;
+  return std::to_string(temp) + " deg F and " + weatherType[wtype];
+}
+
 /* client session handler */
 void handle_client(int sockfd) {
   char buffer[256];
@@ -53,7 +62,8 @@ void handle_client(int sockfd) {
 
     int n;
     if(strcmp(REQ_WEATHER.c_str(), buffer) == 0) {
-      n = write(sockfd, WEATHER.c_str(), WEATHER.length());
+      std::string curweather = WEATHER + currentWeather() + "\n";
+      n = write(sockfd, curweather.c_str(), curweather.length());
     } else if (strcmp(REQ_TIME.c_str(), buffer) == 0) {
       std::string curtime = TIME + currentDateTime() + "\n";
       n = write(sockfd, curtime.c_str(), curtime.length());
@@ -69,16 +79,20 @@ void handle_client(int sockfd) {
 
 int main() {
   int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd < 0) 
+  if (sockfd < 0) {
     printf("ERROR opening socket\n");
+    exit(0);
+  }
 
   struct sockaddr_in serv_addr;
   bzero((char *) &serv_addr, sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_addr.s_addr = INADDR_ANY;
   serv_addr.sin_port = htons(PORTNO);
-  if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
+  if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
     printf("ERROR on binding\n");
+    exit(0);
+  }
 
   for(;;) {
     std::cout << "Listening...\n";
