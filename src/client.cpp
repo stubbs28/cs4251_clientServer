@@ -1,3 +1,8 @@
+/*
+ *  Client Thing 
+ *  by Luke Stubbs
+ */
+#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -9,28 +14,28 @@
 
 #define PORTNO 4251
 
-void error(const char *msg)
-{
-    perror(msg);
-    exit(0);
-}
-
 int main(int argc, char *argv[])
 {
   if (argc < 2) {
-     fprintf(stderr,"usage %s hostname\n", argv[0]);
-     exit(0);
+    std::cout << "usage " << argv[0] << " hostname";
+    exit(0);
   }
-  int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd < 0)
-      error("ERROR opening socket");
 
+  // open socket
+  int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (sockfd < 0) {
+    std::cout << "ERROR opening socket";
+    exit(0);
+  }
+
+  // get server address
   struct hostent* server = gethostbyname(argv[1]);
   if (server == NULL) {
-      fprintf(stderr,"ERROR, no such host\n");
-      exit(0);
+    std::cout << "ERROR, no such host";
+    exit(0);
   }
 
+  // setup server connection
   struct sockaddr_in serv_addr;
   bzero((char *) &serv_addr, sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
@@ -38,22 +43,35 @@ int main(int argc, char *argv[])
       server->h_length);
   serv_addr.sin_port = htons(PORTNO);
 
-  if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
-    error("ERROR connecting");
+  // connecto to server
+  if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) {
+    std::cout << "ERROR connecting";
+    exit(0);
+  }
 
+  // session loop
   char buffer[256];
   for(;;) {
     bzero(buffer,256);
-    if(read(sockfd,buffer,255) < 0)
-       error("ERROR reading from socket");
-    printf("%s\n",buffer);
-    printf("-> ");
+    // get prompt from server
+    if(read(sockfd,buffer,255) < 0) {
+      std::cout << "ERROR reading from socket";
+      exit(0);
+    }
+
+    // get user input and send to server
+    std::cout << buffer << "-> ";
     fgets(buffer,255,stdin);
-    if(write(sockfd,buffer,strlen(buffer)) < 0)
-       error("ERROR writing to socket");
+    if(write(sockfd,buffer,strlen(buffer)) < 0) {
+      std::cout << "ERROR writing to socket";
+      exit(0);
+    }
+
+    // did the user quit the session?
     if(strcmp("q\n", buffer) == 0)
         break;
   }
+  // clean up
   close(sockfd);
   return 0;
 }
