@@ -1,14 +1,19 @@
 Name: Luke Stubbs
 GTID: 902668495
 
-src/client.cpp - client source code.
-src/server.cpp - server source code.
-
-obj/client.o - client object.
-obj/server.o - server object.
-
-client - the client executable.
+client - The client executable.
   usage: "./client localhost"
 
-server - the server executable.
+server - The server executable.
   usage: "./server"
+
+client_out - Example execution outputs at client side.
+
+log.txt - Server log of example client/server interaction.
+
+src/client.cpp - Client source code.
+src/server.cpp - Server source code.
+
+obj/client.o - Client object.
+obj/server.o - Server object.
+

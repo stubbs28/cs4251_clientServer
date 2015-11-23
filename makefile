@@ -13,4 +13,4 @@ main: obj/server.o obj/client.o
 .PHONY: clean
 
 clean:
-	rm -rf obj/ server client
+	rm -rf obj/ server client log.txt

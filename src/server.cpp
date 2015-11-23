@@ -27,13 +27,24 @@ std::string TIME = "Current Time: ";
 std::string WEATHER_TYPE[] = {"Sunny", "Cloudy", "Rainy", "Stormy"};
 std::mutex mtx;
 
+/* Logging helper function */
 void log(std::string str)
 {
+  // get a timestamp for the log
+  time_t now = time(0);
+  struct tm tstruct;
+  char buff[80];
+  tstruct = *localtime(&now);
+  strftime(buff, sizeof(buff), "%X", &tstruct);
+  std::string logstr = buff;
+  logstr += ": " + str;
+
+  // write to log. lock for safty.
   mtx.lock();
-  std::cout << str;
+  std::cout << logstr;
   FILE* pfile;
   pfile= fopen("log.txt", "a");
-  fputs(str.c_str, pfile);
+  fputs(logstr.c_str(), pfile);
   fclose(pfile);
   mtx.unlock();
 }
@@ -53,7 +64,6 @@ std::string currentWeather() {
   srand(time(NULL));
   int temp = rand() % 170 - 45;
   int wtype = rand() % 4;
-  std::cout << wtype;
   return std::to_string(temp) + " deg F and " + WEATHER_TYPE[wtype];
 }
 
@@ -82,7 +92,7 @@ void handle_client(int sockfd) {
     }
 
     // log user querry
-    std::string logstr = "[" + std::to_string(sockfd) + "] Message: " + buffer + "\n";
+    std::string logstr = "[" + std::to_string(sockfd) + "] Message: " + buffer;
     log(logstr);
 
     int n;
