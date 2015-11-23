@@ -13,6 +13,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <ctime>
+#include <mutex>
 
 #define PORTNO 4251
 
@@ -24,6 +25,18 @@ std::string WELCOME = "Welcome to Atlanta Weather and Time Server\n" + HELP;
 std::string WEATHER = "Today's Weather: ";
 std::string TIME = "Current Time: ";
 std::string WEATHER_TYPE[] = {"Sunny", "Cloudy", "Rainy", "Stormy"};
+std::mutex mtx;
+
+void log(std::string str)
+{
+  mtx.lock();
+  std::cout << str;
+  FILE* pfile;
+  pfile= fopen("log.txt", "a");
+  fputs(str.c_str, pfile);
+  fclose(pfile);
+  mtx.unlock();
+}
 
 /* Gets the Current Date and Time */
 const std::string currentDateTime() {
@@ -49,20 +62,28 @@ void handle_client(int sockfd) {
   char buffer[256];
   bzero(buffer,256);
 
+  int run = 1;
+
   // welcome user, display help, prompt for input
-  if(write(sockfd, WELCOME.c_str(), WELCOME.length()) < 0)
-    std::cout << "[" << sockfd << "] ERROR writing to socket\n";
+  if(write(sockfd, WELCOME.c_str(), WELCOME.length()) < 0) {
+    std::string error = "[" + std::to_string(sockfd) + "] ERROR writing to socket\n";
+    log(error);
+    run = 0;
+  }
 
   // session loop
-  for(;;) {
+  while(run > 0) {
     bzero(buffer,256);
     // get user querry
-    if(read(sockfd, buffer, 255) < 0)
-      std::cout << "[" << sockfd << "] ERROR reading from socket\n";
+    if(read(sockfd, buffer, 255) < 0) {
+      std::string error = "[" + std::to_string(sockfd) + "] ERROR reading from socket\n";
+      log(error);
+      break;
+    }
 
     // log user querry
-    std::cout << "[" << sockfd << "]Message: " << buffer << "\n";
-
+    std::string logstr = "[" + std::to_string(sockfd) + "] Message: " + buffer + "\n";
+    log(logstr);
 
     int n;
     // answer user querry
@@ -77,8 +98,11 @@ void handle_client(int sockfd) {
     } else {
       n = write(sockfd, HELP.c_str(), HELP.length());
     }
-    if(n < 0)
-      std::cout << "[" << sockfd << "] ERROR writing to socket\n";
+    if(n < 0) {
+      std::string error = "[" + std::to_string(sockfd) + "] ERROR writing to socket\n";
+      log(error);
+      break;
+    }
   }
   // clean up session
   close(sockfd);
@@ -105,13 +129,14 @@ int main() {
 
   // main loop
   for(;;) {
-    std::cout << "Listening...\n";
+    log("[Main] Listening...\n");
     listen(sockfd, 5);
     struct sockaddr_in cli_addr;
     socklen_t clilen = sizeof(cli_addr);
     // accept new client connection
     int newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-    std::cout << "Accepted: " << newsockfd << "\n";
+    std::string accepted = "[Main] Accepted: " + std::to_string(newsockfd) + "\n";
+    log(accepted);
     // handle client session in new thread
     std::thread(handle_client, newsockfd).detach();
   }
